@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>사회심리실험</title>
+  <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@300;400;500;700&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg:        #0a0a0f;
+      --surface:   #12121a;
+      --card:      #1a1a28;
+      --border:    #2a2a40;
+      --accent:    #e8ff47;
+      --accent2:   #47c8ff;
+      --danger:    #ff4747;
+      --text:      #e8e8f0;
+      --muted:     #6b6b8a;
+      --glow:      rgba(232,255,71,0.18);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Noto Sans KR', sans-serif;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* scanline overlay */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 2px,
+        rgba(0,0,0,0.07) 2px,
+        rgba(0,0,0,0.07) 4px
+      );
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ─── SCREENS ─── */
+    .screen { display: none; width: 100%; max-width: 900px; padding: 2rem; animation: fadeIn .5s ease; min-height: 100vh; justify-content: center; }
+    .screen.active { display: flex; flex-direction: column; align-items: center; }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* ─── INTRO ─── */
+    #intro { gap: 2rem; text-align: center; }
+
+    .logo-badge {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: .75rem;
+      color: var(--accent);
+      letter-spacing: .2em;
+      border: 1px solid var(--accent);
+      padding: .3rem .9rem;
+      text-transform: uppercase;
+    }
+
+    h1.title {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: clamp(2.4rem, 6vw, 4rem);
+      line-height: 1.05;
+      color: var(--text);
+    }
+    h1.title span { color: var(--accent); }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: .95rem;
+      line-height: 1.75;
+      max-width: 540px;
+    }
+
+    .intro-notice {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .intro-time-notice {
+      font-size: .78rem;
+      color: var(--muted);
+      margin-top: -.8rem;
+    }
+
+    .rule-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent);
+      padding: 1.2rem 1.6rem;
+      text-align: left;
+      width: 100%;
+      max-width: 480px;
+      font-size: .9rem;
+      line-height: 2;
+      color: var(--muted);
+    }
+    .rule-box strong { color: var(--text); font-weight: 500; }
+
+    /* ─── BUTTON ─── */
+    .btn {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 1.1rem;
+      letter-spacing: .08em;
+      padding: .85rem 3rem;
+      border: none; cursor: pointer;
+      position: relative; overflow-y: auto;
+      overflow-x: hidden;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: #0a0a0f;
+      box-shadow: 0 0 24px var(--glow);
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px var(--glow); }
+    .btn-primary:active { transform: translateY(0); }
+
+    /* ─── STAGE ─── */
+    #stage { gap: 1.4rem; }
+
+    .stage-header {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .stage-label {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: .8rem;
+      color: var(--accent);
+      letter-spacing: .15em;
+    }
+
+    /* CENTERED BIG TIMER */
+    .timer-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .4rem;
+    }
+    .timer-label-text {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: .7rem;
+      color: var(--muted);
+      letter-spacing: .2em;
+    }
+    .timer-ring-big { position: relative; width: 90px; height: 90px; }
+    .timer-ring-big svg { transform: rotate(-90deg); }
+    .timer-ring-big circle.bg { fill: none; stroke: var(--border); stroke-width: 6; }
+    .timer-ring-big circle.prog {
+      fill: none; stroke: var(--accent); stroke-width: 6;
+      stroke-linecap: round;
+      stroke-dasharray: 238.76;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset .9s linear, stroke .3s;
+    }
+    .timer-ring-big circle.prog.urgent { stroke: var(--danger); }
+    .timer-num {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1.9rem;
+      color: var(--accent);
+    }
+    .timer-num.urgent { color: var(--danger); }
+
+    /* TIMER (old small — kept for reference but unused) */
+    .timer-wrap {
+      display: flex;
+      align-items: center;
+      gap: .7rem;
+    }
+    .timer-ring { position: relative; width: 52px; height: 52px; }
+    .timer-ring svg { transform: rotate(-90deg); }
+    .timer-ring circle.bg { fill: none; stroke: var(--border); stroke-width: 4; }
+    .timer-ring circle.prog {
+      fill: none; stroke: var(--accent); stroke-width: 4;
+      stroke-linecap: round;
+      stroke-dasharray: 138.2;
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset .9s linear, stroke .3s;
+    }
+    .timer-ring circle.prog.urgent { stroke: var(--danger); }
+    .timer-num {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: 1.1rem;
+      color: var(--accent);
+    }
+    .timer-num.urgent { color: var(--danger); }
+
+    /* QUESTION */
+    .question-text {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: clamp(1.1rem, 2.5vw, 1.4rem);
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    /* PROGRESS BAR */
+    .progress-bar-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--accent);
+      transition: width .4s ease;
+    }
+
+    /* CHOICES */
+    .choices {
+      width: 100%;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.2rem;
+    }
+
+    .choice-card {
+      background: var(--card);
+      border: 2px solid var(--border);
+      cursor: pointer;
+      transition: border-color .18s, transform .18s, box-shadow .18s;
+      position: relative;
+      overflow-y: auto;
+      overflow-x: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .choice-card:hover {
+      border-color: var(--accent);
+      transform: translateY(-3px);
+      box-shadow: 0 6px 30px rgba(232,255,71,.12);
+    }
+    .choice-card.selected {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--glow);
+    }
+    .choice-card.disabled { pointer-events: none; opacity: .7; }
+
+    .choice-label {
+      position: absolute; top: .6rem; left: .7rem;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: .85rem;
+      background: var(--accent);
+      color: #0a0a0f;
+      padding: .2rem .55rem;
+      font-weight: 700;
+      z-index: 2;
+    }
+
+    .choice-img-wrap {
+      width: 100%;
+      aspect-ratio: 4/3;
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow-y: auto;
+      overflow-x: hidden;
+      position: relative;
+    }
+    .choice-img-wrap img {
+      width: 100%; height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    /* Placeholder when no image */
+    .img-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      color: var(--muted);
+      font-family: 'Share Tech Mono', monospace;
+      font-size: .75rem;
+      text-align: center;
+      padding: 1rem;
+      width: 100%; height: 100%;
+      position: absolute; inset: 0;
+    }
+    .img-placeholder .ph-icon {
+      font-size: 2.5rem;
+      opacity: .35;
+    }
+
+    .choice-desc {
+      padding: .85rem 1rem;
+      font-size: .88rem;
+      color: var(--muted);
+      line-height: 1.55;
+      border-top: 1px solid var(--border);
+    }
+    .choice-desc strong { color: var(--text); display: block; font-size: .95rem; margin-bottom: .2rem; }
+
+    /* timeout flash */
+    .timeout-overlay {
+      position: fixed; inset: 0;
+      background: rgba(255,71,71,.08);
+      pointer-events: none;
+      animation: flashRed .4s ease;
+      z-index: 100;
+    }
+    @keyframes flashRed {
+      0%   { opacity: 1; }
+      100% { opacity: 0; }
+    }
+
+    /* ─── RESULT ─── */
+    #result { gap: 1.8rem; text-align: center; }
+
+    h2.result-title {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: clamp(1.6rem, 4vw, 2.4rem);
+    }
+    h2.result-title span { color: var(--accent); }
+
+    .result-grid {
+      width: 100%;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+    .result-cell {
+      background: var(--card);
+      border: 1px solid var(--border);
+      padding: 1.2rem .8rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: .4rem;
+    }
+    .result-cell .rc-stage { font-family: 'Share Tech Mono', monospace; font-size: .72rem; color: var(--muted); letter-spacing: .1em; }
+    .result-cell .rc-choice { font-family: 'Black Han Sans', sans-serif; font-size: 1.6rem; color: var(--accent); }
+    .result-cell .rc-choice.timeout-mark { color: var(--danger); font-size: 1.2rem; }
+    .result-cell .rc-time { font-family: 'Share Tech Mono', monospace; font-size: .78rem; color: var(--muted); }
+    .result-cell .rc-label { font-size: .78rem; color: var(--text); }
+
+    .analysis-box {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-left: 3px solid var(--accent2);
+      padding: 1.4rem 1.8rem;
+      text-align: left;
+      width: 100%;
+      max-width: 600px;
+      line-height: 1.9;
+      font-size: .9rem;
+    }
+    .analysis-box .ana-title {
+      font-family: 'Share Tech Mono', monospace;
+      font-size: .75rem;
+      color: var(--accent2);
+      letter-spacing: .12em;
+      margin-bottom: .6rem;
+    }
+    .analysis-box p { color: var(--muted); }
+    .analysis-box p strong { color: var(--text); }
+
+    .capture-notice {
+      font-size: 1rem;
+      font-weight: 500;
+      color: var(--accent);
+      background: rgba(232,255,71,0.07);
+      border: 1.5px dashed var(--accent);
+      padding: .8rem 1.8rem;
+      letter-spacing: .03em;
+      text-align: center;
+    }
+
+    .btn-row { display: flex; gap: 1rem; }
+    .btn-outline {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 1rem;
+      padding: .75rem 2rem;
+      border: 1.5px solid var(--border);
+      background: transparent;
+      color: var(--muted);
+      cursor: pointer;
+      transition: border-color .15s, color .15s;
+      letter-spacing: .06em;
+    }
+    .btn-outline:hover { border-color: var(--text); color: var(--text); }
+
+    /* ─── TRANSITION OVERLAY ─── */
+    #transition-screen {
+      position: fixed; inset: 0;
+      background: var(--bg);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200;
+      opacity: 0; pointer-events: none;
+      transition: opacity .35s;
+    }
+    #transition-screen.show { opacity: 1; pointer-events: all; }
+    .trans-text {
+      font-family: 'Black Han Sans', sans-serif;
+      font-size: 2rem;
+      color: var(--accent);
+      letter-spacing: .1em;
+    }
+
+    /* ─── COMING SOON BADGE ─── */
+    .coming-soon-badge {
+      display: inline-block;
+      font-family: 'Share Tech Mono', monospace;
+      font-size: .65rem;
+      background: var(--border);
+      color: var(--muted);
+      padding: .15rem .45rem;
+      letter-spacing: .1em;
+      vertical-align: middle;
+      margin-left: .4rem;
+    }
+
+    @media (max-width: 600px) {
+      .choices { grid-template-columns: 1fr; }
+      .result-grid { grid-template-columns: 1fr 1fr; }
+
+      body { align-items: flex-start; }
+
+      .screen { padding: 1.2rem 1rem; min-height: auto; justify-content: flex-start; }
+
+      h1.title { font-size: 2rem; }
+
+      .stage-header { margin-bottom: .2rem; }
+
+      .timer-ring-big { width: 72px; height: 72px; }
+      .timer-ring-big svg { width: 72px; height: 72px; }
+      .timer-num { font-size: 1.5rem; }
+
+      .question-text { font-size: 1rem; }
+
+      .choice-img-wrap { aspect-ratio: 3/2; }
+
+      .btn-row { flex-direction: column; width: 100%; }
+      .btn, .btn-outline { width: 100%; text-align: center; padding: .85rem 1rem; }
+
+      .result-grid { grid-template-columns: 1fr 1fr; }
+
+      .analysis-box { padding: 1rem 1.2rem; }
+
+      .rule-box { font-size: .85rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ── INTRO ── -->
+<div id="intro" class="screen active">
+  <div class="logo-badge">사회심리학 실험 · CONFORMITY LAB</div>
+  <h1 class="title">Follow Your<br /><span>Instinct</span></h1>
+  <div class="rule-box">
+    <strong>📋 실험 규칙</strong><br />
+    ⏱ 각 단계마다 <strong>5초</strong>의 제한 시간<br />
+    🚇 총 <strong>4개</strong>의 장면을 순서대로 제시<br />
+    🖱 화면 안의 두 선택지 중 하나를 클릭<br />
+    ⚠ 시간 초과 시 자동으로 다음 단계로 이동
+  </div>
+  <p class="intro-notice">질문을 주의깊게 읽고 답변해주세요.</p>
+  <p class="intro-time-notice">제한시간은 5초 입니다</p>
+  <button class="btn btn-primary" onclick="startGame()">실험 시작 →</button>
+</div>
+
+<!-- ── STAGE ── -->
+<div id="stage" class="screen">
+  <div class="stage-header">
+    <span class="stage-label" id="stage-label">STAGE 01 / 04</span>
+  </div>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-bar-fill" id="prog-fill" style="width:25%"></div>
+  </div>
+
+  <div class="timer-center">
+    <div class="timer-ring-big">
+      <svg width="90" height="90" viewBox="0 0 90 90">
+        <circle class="bg" cx="45" cy="45" r="38"/>
+        <circle class="prog" id="timer-prog" cx="45" cy="45" r="38"/>
+      </svg>
+      <div class="timer-num" id="timer-num">5</div>
+    </div>
+    <span class="timer-label-text">TIME LEFT</span>
+  </div>
+
+  <p class="question-text" id="stage-question">어느 쪽 경로를 선택하시겠습니까?</p>
+
+  <div class="choices" id="choices-wrap">
+    <!-- dynamically injected -->
+  </div>
+</div>
+
+<!-- ── RESULT ── -->
+<div id="result" class="screen">
+  <div class="logo-badge">실험 완료 · EXPERIMENT COMPLETE</div>
+  <h2 class="result-title">당신의 <span>선택</span> 결과</h2>
+
+  <div class="result-grid" id="result-grid">
+    <!-- dynamically injected -->
+  </div>
+
+  <p class="capture-notice">📸 이 화면을 캡쳐하고, 설문조사지에 올려주세요.</p>
+
+  <div class="btn-row">
+    <button class="btn btn-primary" onclick="restartGame()">다시 실험하기</button>
+    <button class="btn btn-outline" onclick="goIntro()">처음으로</button>
+  </div>
+</div>
+
+<!-- ── TRANSITION ── -->
+<div id="transition-screen">
+  <div class="trans-text" id="trans-text">STAGE 02</div>
+</div>
+
+<script>
+/* ─────────────────────────────────────────────
+   STAGE DATA
+   이미지를 교체할 때:
+   · imgA / imgB 에 파일 경로 또는 URL을 입력하세요.
+   · 예: imgA: 'images/stage1_many.jpg'
+   · placeholder 텍스트는 이미지가 없을 때만 표시됩니다.
+──────────────────────────────────────────────── */
+const STAGES = [
+  {
+    id: 1,
+    location: '🚇 지하철역 · SUBWAY STATION',
+    question: '지금 이 지하철역에서, 당신은 어느 쪽 경로를 선택하시겠습니까?',
+    // ↓↓↓ 이미지 경로를 직접 입력해 주세요 ↓↓↓
+    imgA: 'alotofpeople.png',   // 예: 'images/stage1_A.jpg'
+    imgB: 'fewpeople.png',   // 예: 'images/stage1_B.jpg'
+    labelA: '선택지 A',
+    labelB: '선택지 B',
+    descA: '<strong>경로 A</strong> 많은 사람들이 이동 중인 통로',
+    descB: '<strong>경로 B</strong> 소수(3명)만 이동 중인 통로',
+  },
+  {
+    id: 2,
+    location: '🏛 박물관 · MUSEUM',
+    question: '이곳은 박물관, 당신은 어느 경로로 관람하시겠습니까?',
+    imgA: 'museum.png',
+    imgB: 'museummany.png',
+    labelA: '선택지 A',
+    labelB: '선택지 B',
+    descA: '<strong>선택지 A</strong> 추가 예정',
+    descB: '<strong>선택지 B</strong> 추가 예정',
+    comingSoon: true,
+  },
+  {
+    id: 3,
+    location: '🎓 강의실 · CLASSROOM',
+    question: '강의 시작 3분 전, 어느 자리에 앉으시겠습니까?',
+    imgA: 'lecturefewfew.png',
+    imgB: 'lecturemany.png',
+    labelA: '선택지 A',
+    labelB: '선택지 B',
+    descA: '<strong>선택지 A</strong> 추가 예정',
+    descB: '<strong>선택지 B</strong> 추가 예정',
+    comingSoon: true,
+  },
+  {
+    id: 4,
+    location: '🚻 공중화장실 · PUBLIC RESTROOM',
+    question: '공중화장실, 어느 줄에 서시겠습니까?',
+    imgA: 'bathroommany.png',
+    imgB: 'bathroomfew.png',
+    labelA: '선택지 A',
+    labelB: '선택지 B',
+    descA: '<strong>선택지 A</strong> 추가 예정',
+    descB: '<strong>선택지 B</strong> 추가 예정',
+    comingSoon: true,
+  },
+];
+
+const TOTAL_TIME = 5;          // 제한 시간 (초)
+const CIRCUMFERENCE = 2 * Math.PI * 38; // SVG circle 둘레
+
+let currentStage = 0;
+let timerInterval = null;
+let timeLeft = TOTAL_TIME;
+let results = [];  // { stageId, choice: 'A'|'B'|'TIMEOUT', elapsed }
+let stageStartTime = null;
+
+/* ── helpers ── */
+function $(id) { return document.getElementById(id); }
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  $(id).classList.add('active');
+}
+
+/* ── start ── */
+function startGame() {
+  currentStage = 0;
+  results = [];
+  showScreen('stage');
+  loadStage(currentStage);
+}
+
+function goIntro() {
+  clearTimer();
+  showScreen('intro');
+}
+
+function restartGame() {
+  startGame();
+}
+
+/* ── load stage ── */
+function loadStage(idx) {
+  const s = STAGES[idx];
+  timeLeft = TOTAL_TIME;
+
+  // header
+  $('stage-label').textContent = `STAGE ${String(idx + 1).padStart(2,'0')} / ${STAGES.length}`;
+
+  // progress bar
+  $('prog-fill').style.width = ((idx + 1) / STAGES.length * 100) + '%';
+
+  // question
+  $('stage-question').innerHTML = `
+    <span style="font-size:.75rem;color:var(--muted);font-family:'Share Tech Mono',monospace;letter-spacing:.1em;display:block;margin-bottom:.4rem">
+      ${s.location}${s.comingSoon ? ' <span class="coming-soon-badge">COMING SOON</span>' : ''}
+    </span>
+    ${s.question}
+  `;
+
+  // choices
+  $('choices-wrap').innerHTML = buildChoiceHTML(s, 'A') + buildChoiceHTML(s, 'B');
+
+  // timer
+  resetTimerUI();
+  stageStartTime = Date.now();
+  startTimer(idx);
+}
+
+function buildChoiceHTML(s, which) {
+  const img    = which === 'A' ? s.imgA : s.imgB;
+  const label  = which === 'A' ? s.labelA : s.labelB;
+  const desc   = which === 'A' ? s.descA  : s.descB;
+  const phIcon = which === 'A' ? '👥' : '🚶';
+  const phText = which === 'A' ? '이미지를 추가해 주세요\n(imgA 경로 입력)' : '이미지를 추가해 주세요\n(imgB 경로 입력)';
+
+  const imgContent = img
+    ? `<img src="${img}" alt="${label}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+    : '';
+  const placeholder = `
+    <div class="img-placeholder" style="${img ? 'display:none' : ''}">
+      <span class="ph-icon">${phIcon}</span>
+      <span>${phText.replace('\n','<br/>')}</span>
+    </div>`;
+
+  return `
+    <div class="choice-card" id="card-${which}" onclick="selectChoice('${which}')">
+      <span class="choice-label">${label}</span>
+      <div class="choice-img-wrap">
+        ${imgContent}
+        ${placeholder}
+      </div>
+    </div>`;
+}
+
+/* ── timer ── */
+function resetTimerUI() {
+  const prog = $('timer-prog');
+  const num  = $('timer-num');
+  prog.style.strokeDashoffset = '0';
+  prog.classList.remove('urgent');
+  num.textContent = TOTAL_TIME;
+  num.classList.remove('urgent');
+}
+
+function startTimer(stageIdx) {
+  clearTimer();
+  timerInterval = setInterval(() => {
+    timeLeft--;
+
+    // update ring
+    const prog = $('timer-prog');
+    const frac = timeLeft / TOTAL_TIME;
+    prog.style.strokeDashoffset = CIRCUMFERENCE * (1 - frac);
+    $('timer-num').textContent = timeLeft;
+
+    if (timeLeft <= 2) {
+      prog.classList.add('urgent');
+      $('timer-num').classList.add('urgent');
+    }
+
+    if (timeLeft <= 0) {
+      clearTimer();
+      handleTimeout(stageIdx);
+    }
+  }, 1000);
+}
+
+function clearTimer() {
+  if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
+}
+
+/* ── selection ── */
+function selectChoice(which) {
+  clearTimer();
+  const elapsed = ((Date.now() - stageStartTime) / 1000).toFixed(2);
+  results.push({ stageId: STAGES[currentStage].id, choice: which, elapsed });
+
+  // visual feedback
+  document.querySelectorAll('.choice-card').forEach(c => c.classList.add('disabled'));
+  $(`card-${which}`).classList.add('selected');
+
+  setTimeout(() => nextStage(), 600);
+}
+
+function handleTimeout(stageIdx) {
+  const elapsed = TOTAL_TIME + '.00';
+  results.push({ stageId: STAGES[stageIdx].id, choice: 'TIMEOUT', elapsed });
+
+  // flash red
+  const overlay = document.createElement('div');
+  overlay.className = 'timeout-overlay';
+  document.body.appendChild(overlay);
+  setTimeout(() => overlay.remove(), 450);
+
+  document.querySelectorAll('.choice-card').forEach(c => c.classList.add('disabled'));
+  setTimeout(() => nextStage(), 700);
+}
+
+function nextStage() {
+  currentStage++;
+  if (currentStage >= STAGES.length) {
+    showResult();
+    return;
+  }
+
+  // transition
+  const ts = $('transition-screen');
+  $('trans-text').textContent = `STAGE ${String(currentStage + 1).padStart(2,'0')}`;
+  ts.classList.add('show');
+  setTimeout(() => {
+    ts.classList.remove('show');
+    loadStage(currentStage);
+  }, 900);
+}
+
+/* ── result ── */
+function showResult() {
+  showScreen('result');
+
+  // build result grid
+  const grid = $('result-grid');
+  grid.innerHTML = results.map((r, i) => `
+    <div class="result-cell">
+      <span class="rc-stage">STAGE ${String(i + 1).padStart(2,'0')}</span>
+      <span class="rc-choice ${r.choice === 'TIMEOUT' ? 'timeout-mark' : ''}">
+        ${r.choice === 'TIMEOUT' ? '시간 초과' : r.choice}
+      </span>
+      <span class="rc-label">${r.choice === 'TIMEOUT' ? '—' : (r.choice === 'A' ? STAGES[i].labelA : STAGES[i].labelB)}</span>
+      <span class="rc-time">${r.choice === 'TIMEOUT' ? '5.00s' : r.elapsed + 's'}</span>
+    </div>
+  `).join('');
+
+}
+</script>
+</body>
+</html>
